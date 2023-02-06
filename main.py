@@ -91,9 +91,9 @@ class Runner:
 
             for j in range(self.game.width):
                 if [i+2,j] in self.game.curPiece.pos:
-                    pygame.draw.rect(self.screen, self.live_colors[self.game.curPiece.piece_value], (30 * j, 30 * i, 30, 30))
+                    pygame.draw.rect(self.screen, self.live_colors[self.game.curPiece.piece_value], (30 * j, 30 * i, 30, 30),2,3)
                 elif [i+2,j] in self.game.shadow_piece.pos:
-                    pygame.draw.rect(self.screen, (255, 255, 255), (30 * j, 30 *i, 30, 30))
+                    pygame.draw.rect(self.screen, (255, 255, 255), (30 * j, 30 *i, 30, 30),2,3)
 
                 elif self.game.board[i+2][j]<0 and self.game.board[i+2][j] != -10:
 
@@ -147,7 +147,11 @@ class Player(Runner) :
 
                     pygame.quit()
                     sys.exit()
-
+            if moves_to_make[1] > 0:
+                for i in range(moves_to_make[1]):
+                    self.game.rotateClockwise(self.game.curPiece)
+                    self.drawBoard()
+                    pygame.time.wait(50)
             if moves_to_make[0]< 0:
 
                 for i in range(-1*moves_to_make[0]):
@@ -162,8 +166,8 @@ class Player(Runner) :
                     self.game.moveRight(self.game.curPiece)
                     self.drawBoard()
                     pygame.time.wait(50)
-            if moves_to_make[1] >0:
-                for i in range(moves_to_make[1]):
+            if moves_to_make[2] >0:
+                for i in range(moves_to_make[2]):
 
                     self.game.rotateClockwise(self.game.curPiece)
                     self.drawBoard()
@@ -172,8 +176,9 @@ class Player(Runner) :
                 self.game.moveDown(self.game.curPiece)
                 self.drawBoard()
                 pygame.time.wait(50)
-            print(f"bumpiness of chosen piece {self.agent.calcBumpiness(self.game.curPiece)}")
+
             self.game.moveDown(self.game.curPiece)
+            print(self.agent.calcHeights(self.game.curPiece))
             print(self.game)
 
             if choice[0][3] >0:
@@ -202,7 +207,7 @@ class Player(Runner) :
         print("Playing game")
         counter = 0
         actions = [self.game.moveDown,self.game.moveRight,self.game.moveLeft, self.game.rotateClockwise]
-        while(self.game.addPiece(random.randint(1, 7)) and counter < 20):
+        while(self.game.addPiece(random.randint(1, 7))):
 
 
             choice = self.agent.chooseMove(self.game.curPiece)
@@ -218,7 +223,7 @@ class Player(Runner) :
                 self.game.removecompletedRows(rows_completed)
 
             counter += 1
-        print(self.game)
+        print(self.game.score)
 
 
 
@@ -228,6 +233,7 @@ def TestAgent():
     agent = Agent.Agent(game)
     print(game)
     game.addPiece(2)
+    """
     for i in range(4):
         game.moveRight(game.curPiece)
     for i in range(20):
@@ -243,10 +249,11 @@ def TestAgent():
     print(f" calc bumpiness in middle {agent.valOfPiece(game.curPiece)}")
     print(game)
     print(game.curPiece.pos)
+    """
     #agent.valOfPiece(game.curPiece)
     start_time = time.time()
-    for i in range(0):
-
+    for i in range(1):
+        print("generating move set")
         agent.gen_move_set(game.curPiece)
     print(f" 100 rounds of this took {time.time()- start_time} seconds")
 
@@ -261,9 +268,9 @@ def main(name):
     print(f'Hi, {name}')  # Press ⌘F8 to toggle the breakpoint.
     pygame.init()
     game = TetrisBoard(10,22)
-    agent = Agent.Agent(game)
+    agent = Agent.Agent(game,[0,-1,0,0])
     player = Player(agent)
-    player.display()
+    print(player.Play())
     #Runner()
     #TestAgent()
 # Press the green button in the gutter to run the script.

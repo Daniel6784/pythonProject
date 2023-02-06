@@ -2,12 +2,14 @@ from Shape import Shape
 import time
 class Agent:
 
-    def __init__(self,game):
+    def __init__(self,game, coef):
         self.game = game
         #coef valus 1:holes 2:bumpiness 3:avg height 4:comp wrows
-        self.coef = [0 ,0,-.51,1]
+        self.coef = coef
 
     def evalMove(self,move):
+        top = self.calcTop(move)
+
         sum = move[0][0]*self.coef[0]
         sum+= move[0][1]*self.coef[1]
         sum += move[0][2]*self.coef[2]
@@ -72,8 +74,11 @@ class Agent:
         highest = self.calcTop(piece.pos)
 
         height_changes = 0
-        for col in highest:
-            height_changes += (self.game.height - highest[col])
+        for i in range(self.game.width):
+            if i in highest.keys():
+                height_changes += (self.game.height - highest[i])
+            else:
+                height_changes += (self.game.height - self.game.col_heights[i])
 
         return  height_changes
 
@@ -82,8 +87,6 @@ class Agent:
         bumpiness = []
         highest = self.calcTop(piece.pos)
         cols = sorted(list(highest.keys()))
-        print(piece)
-        print(highest)
 
         for i in range(self.game.width-1):
 
@@ -100,7 +103,7 @@ class Agent:
             else:
                 added_height = abs(self.game.col_heights[i]-self.game.col_heights[i+1])
                 bumpiness.append(added_height)
-        print(bumpiness)
+
         return sum(bumpiness)
 
 
@@ -131,56 +134,73 @@ class Agent:
                 completed_rows += 1
         return completed_rows
 
+    def posTranslations(self,piece,path,translations):
+
+
+        while (self.game.canMoveLeft(piece)):
+            piece.moveLeft()
+            path = (path[0]-1,path[1],path[2])
+        while (self.game.canMoveRight(piece)):
+            pos_move = Shape(piece.piece_value, self.game.width, self.game.height)
+            for part in range(len(piece.pos)):
+                pos_move.pos[part][0] = piece.pos[part][0]
+                pos_move.pos[part][1] = piece.pos[part][1]
+
+            translations.add((pos_move, path))
+            path = (path[0]+1,path[1],path[2])
+            piece.moveRight()
+        translations.add((piece, path))
+
+    def posRotations(self,piece,path, rotations,togle=False):
+        for i in range(3):
+            if not self.game.canRotateClockwise(piece):
+                break
+            rot_move = Shape(piece.piece_value, self.game.width, self.game.height)
+            for part in range(len(piece.pos)):
+                rot_move.pos[part][0] = piece.pos[part][0]
+                rot_move.pos[part][1] = piece.pos[part][1]
+
+            rotations.add((rot_move, path))
+            if togle:
+                path = (path[0],path[1],path[2]+1)
+            else:
+                path = (path[0],path[1]+1,path[2])
+            piece.rotateClockwise()
+        rotations.add((piece,path))
+
     def gen_move_set(self,piece):
         start_time = time.time()
         actual_moves = ""
-        pos_moves = []
-        proxy_piece = pos_move = Shape(piece.piece_value,self.game.width,self.game.height)
-        path = [0, 0, 0]
+        pos_moves = set()
+        proxy_piece  = Shape(piece.piece_value,self.game.width,self.game.height)
+        path = (0, 0, 0)
+
+        # copies position of current piece into proxy piece
         for part in range(len(piece.pos)):
             proxy_piece.pos[part][0] = piece.pos[part][0]
             proxy_piece.pos[part][1] = piece.pos[part][1]
 
-        while(self.game.canMoveLeft(proxy_piece)):
-            path[0] = path[0] - 1
-            proxy_piece.moveLeft()
+        #generates initial possible rotations
+        rotations_1 = set()
+        self.posRotations(proxy_piece,path,rotations_1)
 
 
-        while(self.game.canMoveRight(proxy_piece)):
-            pos_move = Shape(piece.piece_value, self.game.width, self.game.height)
-            for part in range(len(piece.pos)):
-                pos_move.pos[part][0] = proxy_piece.pos[part][0]
-                pos_move.pos[part][1] = proxy_piece.pos[part][1]
+        translations = set()
+        #gen translations
+        for rotation in rotations_1:
 
-            pos_moves.append([pos_move,[path[0],path[1],path[2]]])
-            path[0] = path[0] + 1
-            proxy_piece.moveRight()
-        pos_moves.append([proxy_piece,[path[0],path[1],path[2]]])
+            self.posTranslations(rotation[0],rotation[1],translations)
+
 
         rotations = []
-        for move in pos_moves:
-            path = move[1]
-            for i in range(3):
+        total_pos_moves = set()
+        for move in translations:
+            self.posRotations(move[0],move[1],total_pos_moves,togle=True)
 
-
-                if not self.game.canRotateClockwise(move[0]):
-
-                    break
-                rot_move = Shape(piece.piece_value, self.game.width, self.game.height)
-                for part in range(len(move[0].pos)):
-                    rot_move.pos[part][0] =  move[0].pos[part][0]
-                    rot_move.pos[part][1] = move[0].pos[part][1]
-
-                rotations.append([rot_move,[path[0],path[1],path[2]]])
-                path[1] += 1
-
-                move[0].rotateClockwise()
-
-
-        pos_moves = pos_moves + rotations
         evals = []
 
-        for move in pos_moves:
+        for move in total_pos_moves:
+
             evals.append([self.valOfPiece(move[0]),move])
 
         return evals

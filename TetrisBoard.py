@@ -43,7 +43,7 @@ class TetrisBoard:
         for i,j in piece.pos:
             if i+1 == self.height:
                 return False
-            elif self.board[i+1][j] <0 and self.board[i+1][j] != -10:
+            elif self.board[i+1][j] <0:
                 return False
         return True
 
