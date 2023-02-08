@@ -1,6 +1,6 @@
 from Shape import Shape
 from colorama import Fore, Back, Style
-
+import random
 
 class TetrisBoard:
 
@@ -9,7 +9,7 @@ class TetrisBoard:
         self.board = [[0]*width for x in range(height)]
         self.width = width
         self.height = height
-
+        self.cleared_rows = 0
 
         self.col_heights = [self.height]*self.width
         self.shadow_piece = []
@@ -22,14 +22,36 @@ class TetrisBoard:
         self.cleared_levels = 0
 
         self.curPiece = []
+        self.bag = [1,2,3,4,5,6,7]
+        random.shuffle(self.bag)
+        self.piece_index = 0
+        self.nexPiece = Shape(self.randomPiece(),self.width,self.height)
 
 
+    def randomPiece(self):
+        if self.piece_index == 6:
+            random.shuffle(self.bag)
+            self.piece_index = 0
+        self.piece_index += 1
+        return self.bag[self.piece_index]
+
+    def addRandomPiece(self):
+        self.curPiece = self.nexPiece
+        self.nexPiece = Shape(self.randomPiece(),self.width,self.height)
+        for part in self.curPiece.pos:
+
+            if self.board[part[0]][part[1]] <0:
+                #print("Could not add Piece ")
+                #print("Game Over")
+                #print(self.score)
+                return False
+        return True
 
     def addPiece(self,piece):
         self.curPiece = Shape(piece,self.width,self.height)
+        self.nexPiece = Shape(piece,self.width,self.height)
         self.shadow_piece = Shape(piece,self.width,self.height)
-
-
+        self.cur_piece_index = 0
 
         for part in self.curPiece.pos:
 
@@ -37,6 +59,7 @@ class TetrisBoard:
                 print("Could not add Piece ")
                 print("Game Over")
                 return False
+
         return True
 
     def canMoveDown(self,piece):
@@ -51,6 +74,7 @@ class TetrisBoard:
         if not  self.canMoveDown(piece) and piece is self.curPiece:
             for i,j in self.curPiece.pos:
                  if self.col_heights[j] >= i:
+
                      self.col_heights[j] = i
 
                  self.board[i][j] = -1*piece.piece_value
@@ -116,7 +140,7 @@ class TetrisBoard:
 
     def rotateClockwise(self,piece):
         if not self.canRotateClockwise(piece):
-            print("coudl not rotate")
+            #print("coudl not rotate")
             return
         piece.rotateClockwise()
 
@@ -143,7 +167,7 @@ class TetrisBoard:
 
     def rotateAntiClockwise(self):
         if not self.canRotateClockwise():
-            print("could not rotate")
+            #print("could not rotate")
             return
         self.clearPiece()
         rotation_matrix = self.rotations[self.pieceValue][self.rotation-1]
@@ -178,7 +202,7 @@ class TetrisBoard:
         for completed_row in rows:
             for col in range(self.width):
                 self.board[completed_row][col] = 0
-                self.col_heights[col] = self.col_heights[col] - 1
+                self.col_heights[col] = self.col_heights[col] + 1
             for row in range(completed_row-1):
                 for col in range(self.width):
                     if self.board[completed_row -row-1][col]<0:

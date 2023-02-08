@@ -1,18 +1,20 @@
 from Shape import Shape
 import time
+from TetrisBoard import TetrisBoard
 class Agent:
 
-    def __init__(self,game, coef):
-        self.game = game
+    def __init__(self, coef):
+        self.game = TetrisBoard(10,22)
         #coef valus 1:holes 2:bumpiness 3:avg height 4:comp wrows
         self.coef = coef
 
     def evalMove(self,move):
         top = self.calcTop(move)
 
-        sum = move[0][0]*self.coef[0]
-        sum+= move[0][1]*self.coef[1]
-        sum += move[0][2]*self.coef[2]
+        sum = -move[0][0]*self.coef[0]
+        sum+= -move[0][1]*self.coef[1]
+        sum += -move[0][2]*self.coef[2]
+        sum += move[0][3]*self.coef[3]
         return sum
     def chooseMove(self,piece):
         pos_moves = self.gen_move_set(piece)
@@ -134,7 +136,7 @@ class Agent:
                 completed_rows += 1
         return completed_rows
 
-    def posTranslations(self,piece,path,translations):
+    def posTranslations(self,piece,path,translations,seen_moves):
 
 
         while (self.game.canMoveLeft(piece)):
@@ -145,13 +147,14 @@ class Agent:
             for part in range(len(piece.pos)):
                 pos_move.pos[part][0] = piece.pos[part][0]
                 pos_move.pos[part][1] = piece.pos[part][1]
-
-            translations.add((pos_move, path))
+            if not pos_move in seen_moves:
+                translations.add((pos_move, path))
+                seen_moves.add(pos_move)
             path = (path[0]+1,path[1],path[2])
             piece.moveRight()
         translations.add((piece, path))
 
-    def posRotations(self,piece,path, rotations,togle=False):
+    def posRotations(self,piece,path, rotations,seen_moves, togle=False):
         for i in range(3):
             if not self.game.canRotateClockwise(piece):
                 break
@@ -159,8 +162,9 @@ class Agent:
             for part in range(len(piece.pos)):
                 rot_move.pos[part][0] = piece.pos[part][0]
                 rot_move.pos[part][1] = piece.pos[part][1]
-
-            rotations.add((rot_move, path))
+            if rot_move not in seen_moves:
+                rotations.add((rot_move, path))
+                seen_moves.add(rot_move)
             if togle:
                 path = (path[0],path[1],path[2]+1)
             else:
@@ -172,6 +176,7 @@ class Agent:
         start_time = time.time()
         actual_moves = ""
         pos_moves = set()
+        seen_moves = set()
         proxy_piece  = Shape(piece.piece_value,self.game.width,self.game.height)
         path = (0, 0, 0)
 
@@ -182,20 +187,16 @@ class Agent:
 
         #generates initial possible rotations
         rotations_1 = set()
-        self.posRotations(proxy_piece,path,rotations_1)
+        self.posRotations(proxy_piece,path,rotations_1,seen_moves)
 
 
         translations = set()
         #gen translations
         for rotation in rotations_1:
 
-            self.posTranslations(rotation[0],rotation[1],translations)
+            self.posTranslations(rotation[0],rotation[1],translations,seen_moves)
 
-
-        rotations = []
-        total_pos_moves = set()
-        for move in translations:
-            self.posRotations(move[0],move[1],total_pos_moves,togle=True)
+        total_pos_moves = translations
 
         evals = []
 
